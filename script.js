@@ -3,12 +3,16 @@ const askButton = document.getElementById("askButton");
 const userInput = document.getElementById("userInput");
 const responseDiv = document.getElementById("response");
 
-// API key and URL
+// API key and endpoint
 const apiKey = "AIzaSyBgv5aiytRXfsBiY3hEY9G08QfIFc8xEs0";
 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
 
-// Function to handle AI requests
-async function getAIResponse(question) {
+/**
+ * Send a request to the Gemini API and return the response.
+ * @param {string} question - User's input question.
+ * @returns {Promise<string>} - The AI's response text.
+ */
+async function fetchAIResponse(question) {
     const requestBody = {
         contents: [
             {
@@ -22,7 +26,6 @@ async function getAIResponse(question) {
     };
 
     try {
-        // Fetch the API response
         const response = await fetch(apiUrl, {
             method: "POST",
             headers: {
@@ -31,59 +34,57 @@ async function getAIResponse(question) {
             body: JSON.stringify(requestBody),
         });
 
-        // Check for HTTP errors
         if (!response.ok) {
             throw new Error(`API error: ${response.status} ${response.statusText}`);
         }
 
-        // Parse JSON response
         const data = await response.json();
+        const aiResponse = data?.contents?.[0]?.parts?.[0]?.text;
 
-        // Extract the AI's response text
-        if (
-            data.contents &&
-            data.contents[0] &&
-            data.contents[0].parts &&
-            data.contents[0].parts[0].text
-        ) {
-            return data.contents[0].parts[0].text;
-        } else {
+        if (!aiResponse) {
             throw new Error("Unexpected API response structure.");
         }
+
+        return aiResponse;
     } catch (error) {
-        console.error("Error:", error.message);
-        throw error;
+        console.error("Error fetching AI response:", error);
+        throw new Error("Failed to fetch a response. Please try again later.");
     }
 }
 
-// Event listener for the button
-askButton.addEventListener("click", async () => {
+/**
+ * Handle the button click event.
+ */
+async function handleAskButtonClick() {
     const question = userInput.value.trim();
 
     if (!question) {
-        responseDiv.innerHTML = "<p style='color: red;'>Please enter a question.</p>";
+        responseDiv.innerHTML = `<p style="color: red;">Please enter a question before submitting.</p>`;
         return;
     }
 
-    // Show loading message
-    responseDiv.innerHTML = "<p>Processing your request...</p>";
+    // Display loading message
+    responseDiv.innerHTML = `<p>Processing your request...</p>`;
 
     try {
-        // Get the AI response
-        const aiResponse = await getAIResponse(question);
+        // Fetch AI response
+        const aiResponse = await fetchAIResponse(question);
 
-        // Display the response
+        // Display AI response
         responseDiv.innerHTML = `<p>${aiResponse}</p>`;
     } catch (error) {
         // Display error message
         responseDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
     }
-});
+}
 
-// Enable "Enter" key to trigger the button click
+// Attach event listener to the "Ask" button
+askButton.addEventListener("click", handleAskButtonClick);
+
+// Allow pressing "Enter" to trigger the Ask button
 userInput.addEventListener("keypress", (event) => {
     if (event.key === "Enter") {
         event.preventDefault();
-        askButton.click();
+        handleAskButtonClick();
     }
 });
